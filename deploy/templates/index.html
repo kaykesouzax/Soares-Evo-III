@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Relatório de Vendas · Soares Evolucion III</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0d0d0d; --red: #e8001d; --text: #f0f0f0;
+    --muted: #555; --border: #1e1e1e;
+    --mono: 'DM Mono', monospace;
+    --display: 'Bebas Neue', sans-serif;
+    --sans: 'DM Sans', sans-serif;
+  }
+  html, body { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 14px; }
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none; z-index: 0;
+  }
+  * { position: relative; z-index: 1; }
+  header {
+    border-bottom: 1px solid var(--border); padding: 0 40px; height: 52px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; background: var(--bg); z-index: 100;
+  }
+  .logo { display: flex; align-items: center; font-family: var(--mono); font-size: 12px; font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; }
+  .logo-main { color: var(--text); }
+  .logo-sep { color: var(--red); margin: 0 10px; font-weight: 300; }
+  .logo-sub { color: var(--red); font-style: italic; }
+  .header-right { font-family: var(--mono); font-size: 10px; color: var(--muted); letter-spacing: 0.15em; text-transform: uppercase; text-align: right; line-height: 1.6; }
+  main { max-width: 900px; margin: 0 auto; padding: 64px 40px 100px; }
+  .eyebrow { font-family: var(--mono); font-size: 11px; color: var(--red); letter-spacing: 0.25em; text-transform: uppercase; margin-bottom: 18px; }
+  .hero-title { font-family: var(--display); font-size: 72px; line-height: 0.95; margin-bottom: 4px; color: var(--text); }
+  .hero-title-red { font-family: var(--display); font-size: 72px; line-height: 0.95; color: var(--red); margin-bottom: 28px; }
+  .hero-desc { font-size: 13px; color: var(--muted); line-height: 1.7; max-width: 420px; margin-bottom: 52px; font-weight: 300; }
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--border); margin-bottom: 32px; }
+  .step { padding: 14px 20px; border-right: 1px solid var(--border); cursor: pointer; transition: background 0.15s; }
+  .step:last-child { border-right: none; }
+  .step:hover { background: #151515; }
+  .step.active { border-bottom: 2px solid var(--red); background: #110003; }
+  .step-num { font-family: var(--mono); font-size: 10px; color: var(--muted); margin-bottom: 4px; }
+  .step.active .step-num { color: var(--red); }
+  .step-label { font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
+  .step.active .step-label { color: var(--text); }
+  .panel { display: none; }
+  .panel.active { display: block; animation: fadeUp 0.25s ease; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  .field-label-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .field-label-row span { font-family: var(--mono); font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); }
+  .counter.active { color: var(--red) !important; }
+  .inputs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 28px; }
+  textarea { width: 100%; background: #000; border: 1px solid var(--border); color: var(--text); font-family: var(--mono); font-size: 12px; line-height: 1.9; padding: 16px; resize: vertical; min-height: 240px; outline: none; transition: border-color 0.2s; }
+  textarea::placeholder { color: #333; }
+  textarea:focus { border-color: var(--red); }
+  .btn-primary { background: var(--red); color: #fff; border: none; font-family: var(--mono); font-size: 12px; font-weight: 500; letter-spacing: 0.15em; text-transform: uppercase; padding: 14px 32px; cursor: pointer; transition: background 0.15s, transform 0.1s; display: inline-flex; align-items: center; gap: 10px; }
+  .btn-primary:hover { background: #ff1f38; }
+  .btn-primary:active { transform: scale(0.98); }
+  .btn-primary.loading { opacity: 0.7; pointer-events: none; }
+  .btn-primary.loading::after { content: ''; width: 10px; height: 10px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.6s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .btn-secondary { background: transparent; color: var(--muted); border: 1px solid var(--border); font-family: var(--mono); font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; padding: 14px 24px; cursor: pointer; transition: color 0.15s, border-color 0.15s; }
+  .btn-secondary:hover { color: var(--text); border-color: #444; }
+  .actions { display: flex; align-items: center; gap: 12px; }
+  .status { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-left: 8px; }
+  .processing-box { border: 1px solid var(--border); padding: 48px 40px; text-align: center; margin-bottom: 28px; }
+  .proc-icon { font-size: 28px; margin-bottom: 16px; opacity: 0.4; animation: spin 2s linear infinite; display: inline-block; }
+  .proc-title { font-family: var(--mono); font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+  .proc-sub { font-size: 11px; color: #333; }
+  .preview-tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+  .tab { font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); padding: 10px 18px; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; background: none; border-top: none; border-left: none; border-right: none; transition: color 0.15s; }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--red); border-bottom-color: var(--red); }
+  .table-wrap { overflow-x: auto; margin-bottom: 28px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  thead th { background: #0a0000; color: var(--red); font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em; padding: 11px 16px; text-align: left; border-bottom: 1px solid #2a0008; white-space: nowrap; }
+  thead th:not(:nth-child(2)) { text-align: center; }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
+  tbody tr:hover { background: #111; }
+  tbody td { padding: 10px 16px; font-family: var(--mono); font-size: 12px; }
+  tbody td:not(:nth-child(2)) { text-align: center; }
+  .pos { color: var(--muted); }
+  .pos.top1 { color: var(--red); font-weight: 500; }
+  .total-row td { border-top: 1px solid var(--border); font-weight: 500; color: var(--text); background: #0d0d0d; }
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 10px 40px;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+  .footer-main {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    text-align: center;
+  }
+  .footer-main .sep { color: var(--red); margin: 0 6px; }
+  .footer-data {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: #333;
+    letter-spacing: 0.08em;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <span class="logo-main">Soares Evolucion III</span>
+    <span class="logo-sep">|</span>
+    <span class="logo-sub">Relatório de Vendas</span>
+  </div>
+  <div class="header-right">Geração<br>Automática</div>
+</header>
+
+<main>
+  <p class="eyebrow">Relatório de Vendas</p>
+  <div class="hero-title">Cole os dados.</div>
+  <div class="hero-title-red">O relatório será<br>gerado.</div>
+  <p class="hero-desc">
+    Cole as bases de cotas e novos no formato padrão,
+    e baixe o Excel com consolidação, ranking e
+    formatação prontos para uso.
+  </p>
+
+  <div class="steps">
+    <div class="step active" id="step-1">
+      <div class="step-num">1</div>
+      <div class="step-label">Dados do Período</div>
+    </div>
+    <div class="step" id="step-2">
+      <div class="step-num">2</div>
+      <div class="step-label">Processando</div>
+    </div>
+    <div class="step" id="step-3">
+      <div class="step-num">3</div>
+      <div class="step-label">Gerar Excel</div>
+    </div>
+  </div>
+
+  <!-- PAINEL 1 -->
+  <div class="panel active" id="panel-1">
+    <div class="inputs-grid">
+      <div>
+        <div class="field-label-row">
+          <span>Base — Cotas</span>
+          <span class="counter" id="cnt-cotas">0 linhas</span>
+        </div>
+        <textarea id="input-cotas" placeholder="Cole aqui os dados de cotas.
+Exemplo:
+LUAN HENRIQUE	10
+THALYS CASTRO	6
+ADRIANO JOTAERRY	8"></textarea>
+      </div>
+      <div>
+        <div class="field-label-row">
+          <span>Base — Novos</span>
+          <span class="counter" id="cnt-novos">0 linhas</span>
+        </div>
+        <textarea id="input-novos" placeholder="Cole aqui os dados de novos.
+Exemplo:
+LUAN HENRIQUE ROCHA DIAS	12
+ANDREI ALVES DE SOUZA	6
+EDSON RUAN LEAL NOGUEIRA	6"></textarea>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn-primary" id="btn-proximo" onclick="processar()">Próximo →</button>
+      <button class="btn-secondary" onclick="limpar()">Limpar</button>
+      <span class="status" id="status-1"></span>
+    </div>
+  </div>
+
+  <!-- PAINEL 2 -->
+  <div class="panel" id="panel-2">
+    <div class="processing-box">
+      <div class="proc-icon">⚙</div>
+      <div class="proc-title">Processando os dados</div>
+      <div class="proc-sub">Cruzando nomes · Aplicando ranking · Validando PDVs</div>
+    </div>
+  </div>
+
+  <!-- PAINEL 3 -->
+  <div class="panel" id="panel-3">
+    <div class="preview-tabs">
+      <button class="tab active" onclick="trocarAba('geral', this)">Geral</button>
+      <button class="tab" onclick="trocarAba('labrea', this)">Lábrea</button>
+      <button class="tab" onclick="trocarAba('boca', this)">Boca do Acre</button>
+      <button class="tab" onclick="trocarAba('humaita', this)">Humaitá</button>
+    </div>
+    <div class="table-wrap" id="tabela-wrap"></div>
+    <div class="actions">
+      <button class="btn-primary" onclick="baixar()">↓ Baixar Excel</button>
+      <button class="btn-secondary" onclick="irPara(1)">← Recomeçar</button>
+      <span class="status" id="status-3"></span>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="footer-main">
+    Soares Evolucion III <span class="sep">·</span> Relatório de Vendas <span class="sep">—</span> Site feito por Kayke
+  </div>
+  <div class="footer-data" id="footer-data">—</div>
+</footer>
+
+<script>
+const dadosDemo = {
+  geral: [
+    [1,"LUAN HENRIQUE","HUMAITÁ",10,12,22],[2,"THALYS CASTRO","LÁBREA",6,8,14],
+    [3,"RUBENITO GOMES","BOCA DO ACRE",6,3,9],[4,"ANTONIO MARCIO","LÁBREA",5,4,9],
+    [5,"WENDEL SILVA","BOCA DO ACRE",4,5,9],[6,"ANDREI ALVES","HUMAITÁ",3,6,9],
+    [7,"EDSON RUAN","HUMAITÁ",3,6,9],[8,"ADRIANO JOTAERRY","HUMAITÁ",8,0,8],
+    [9,"MARIA HELENA","HUMAITÁ",1,7,8],[10,"ROSA NUNES","HUMAITÁ",4,3,7],
+  ],
+  labrea: [
+    [1,"THALYS CASTRO","LÁBREA",6,8,14],[2,"ANTONIO MARCIO","LÁBREA",5,4,9],
+    [3,"TAYANE MAIA","LÁBREA",4,3,7],[4,"AGUIDA SILVA","LÁBREA",2,3,5],
+    [5,"DOUGLAS MACIEL","LÁBREA",2,3,5],[6,"ARTEMISA BELEM","LÁBREA",1,1,2],
+    [7,"JANDERSON CARNEIRO","LÁBREA",1,1,2],[8,"JOSE EWERTHON","LÁBREA",0,1,1],
+    [9,"RODRIGO QUEMEL","LÁBREA",0,1,1],
+  ],
+  boca: [
+    [1,"RUBENITO GOMES","BOCA DO ACRE",6,3,9],[2,"WENDEL SILVA","BOCA DO ACRE",4,5,9],
+    [3,"CARLOS BARBOSA","BOCA DO ACRE",1,5,6],[4,"OMAR VALE","BOCA DO ACRE",1,3,4],
+    [5,"BRUNA CARLA","BOCA DO ACRE",1,0,1],[6,"JONAS COELHO","BOCA DO ACRE",0,1,1],
+  ],
+  humaita: [
+    [1,"LUAN HENRIQUE","HUMAITÁ",10,12,22],[2,"ANDREI ALVES","HUMAITÁ",3,6,9],
+    [3,"EDSON RUAN","HUMAITÁ",3,6,9],[4,"ADRIANO JOTAERRY","HUMAITÁ",8,0,8],
+    [5,"MARIA HELENA","HUMAITÁ",1,7,8],[6,"ROSA NUNES","HUMAITÁ",4,3,7],
+    [7,"RAIMISON RODRIGUES","HUMAITÁ",3,4,7],[8,"KAWANE KISTNER","HUMAITÁ",1,6,7],
+    [9,"JOSE WILLIAN","HUMAITÁ",3,0,3],[10,"SHIRLANE MELO","HUMAITÁ",1,2,3],
+    [11,"DIEGO GOMES","HUMAITÁ",2,0,2],[12,"ROSIELE TORRES","HUMAITÁ",1,0,1],
+  ],
+};
+
+function contarLinhas(id, cntId) {
+  document.getElementById(id).addEventListener('input', () => {
+    const n = document.getElementById(id).value.split('\n').filter(l => l.trim()).length;
+    const el = document.getElementById(cntId);
+    el.textContent = n + ' linha' + (n !== 1 ? 's' : '');
+    el.classList.toggle('active', n > 0);
+  });
+}
+contarLinhas('input-cotas','cnt-cotas');
+contarLinhas('input-novos','cnt-novos');
+
+function irPara(n) {
+  [1,2,3].forEach(i => {
+    document.getElementById('panel-'+i).classList.toggle('active', i===n);
+    document.getElementById('step-'+i).classList.toggle('active', i===n);
+  });
+}
+
+async function processar() {
+  const cotas = document.getElementById('input-cotas').value.trim();
+  const novos = document.getElementById('input-novos').value.trim();
+  if (!cotas && !novos) { document.getElementById('status-1').textContent = '⚠ Cole ao menos uma base.'; return; }
+  document.getElementById('status-1').textContent = '';
+  const btn = document.getElementById('btn-proximo');
+  btn.classList.add('loading'); btn.textContent = 'Processando';
+  irPara(2);
+
+  try {
+    const resp = await fetch('/gerar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cotas, novos })
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json();
+      btn.classList.remove('loading'); btn.textContent = 'Próximo →';
+      irPara(1);
+      document.getElementById('status-1').textContent = '⚠ ' + (err.erro || 'Erro ao processar.');
+      return;
+    }
+
+    // Dispara download
+    const blob = await resp.blob();
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = 'Relatorio_Vendas.xlsx'; a.click();
+    URL.revokeObjectURL(url);
+
+    btn.classList.remove('loading'); btn.textContent = 'Próximo →';
+    irPara(3);
+    renderTabela('geral');
+    const agora = new Date().toLocaleString('pt-BR', {dateStyle:'short', timeStyle:'medium'});
+    document.getElementById('footer-data').textContent = agora + ' · Relatório gerado';
+
+  } catch(e) {
+    btn.classList.remove('loading'); btn.textContent = 'Próximo →';
+    irPara(1);
+    document.getElementById('status-1').textContent = '⚠ Falha na conexão com o servidor.';
+  }
+}
+
+function renderTabela(aba) {
+  const dados = dadosDemo[aba];
+  const totalC = dados.reduce((a,r)=>a+r[3],0);
+  const totalN = dados.reduce((a,r)=>a+r[4],0);
+  const totalT = dados.reduce((a,r)=>a+r[5],0);
+  const rows = dados.map(r => `
+    <tr>
+      <td><span class="pos ${r[0]===1?'top1':''}">${r[0]}</span></td>
+      <td>${r[1]}</td>
+      <td>${r[3]}</td><td>${r[4]}</td><td>${r[5]}</td>
+    </tr>`).join('');
+  document.getElementById('tabela-wrap').innerHTML = `
+    <table>
+      <thead><tr><th>Pos.</th><th style="text-align:left">Nome do Vendedor</th><th>Cotas</th><th>Novos</th><th>Total</th></tr></thead>
+      <tbody>${rows}<tr class="total-row"><td>—</td><td style="text-align:left">Total Geral</td><td>${totalC}</td><td>${totalN}</td><td>${totalT}</td></tr></tbody>
+    </table>`;
+}
+
+function trocarAba(aba, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderTabela(aba);
+}
+
+function limpar() {
+  ['input-cotas','input-novos'].forEach(id => document.getElementById(id).value = '');
+  ['cnt-cotas','cnt-novos'].forEach(id => { const e = document.getElementById(id); e.textContent='0 linhas'; e.classList.remove('active'); });
+  document.getElementById('status-1').textContent = '';
+  document.getElementById('footer-data').textContent = '—';
+}
+
+function baixar() {
+  document.getElementById('btn-proximo').click();
+}
+</script>
+</body>
+</html>
