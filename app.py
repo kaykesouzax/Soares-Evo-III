@@ -174,6 +174,26 @@ def gerar_excel(dados_todos):
 def index():
     return render_template("index.html")
 
+@app.route("/preview", methods=["POST"])
+def preview():
+    data = request.get_json()
+    texto_cotas = data.get("cotas", "")
+    texto_novos = data.get("novos", "")
+    dados = processar_dados(texto_cotas, texto_novos)
+    if not dados:
+        return jsonify({"erro": "Nenhum vendedor identificado."}), 400
+
+    def rank(lista):
+        s = sorted(lista, key=lambda x: (-x["total"], -x["cotas"], x["nome"]))
+        return [[i+1, d["nome"], d["pdv"], d["cotas"], d["novos"], d["total"]] for i, d in enumerate(s)]
+
+    return jsonify({
+        "geral":   rank(dados),
+        "labrea":  rank([d for d in dados if d["pdv"] == "LÁBREA"]),
+        "boca":    rank([d for d in dados if d["pdv"] == "BOCA DO ACRE"]),
+        "humaita": rank([d for d in dados if d["pdv"] == "HUMAITÁ"]),
+    })
+
 @app.route("/gerar", methods=["POST"])
 def gerar():
     data = request.get_json()
