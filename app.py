@@ -154,6 +154,42 @@ def preencher_aba(ws, dados):
     ws.column_dimensions["D"].width = 12
     ws.column_dimensions["E"].width = 14
 
+def get_zerados(dados_ativos):
+    ativos = {d["nome"] for d in dados_ativos}
+    zerados = sorted([
+        {"nome": nome, "pdv": pdv}
+        for nome, pdv in VENDEDORES_PDV.items()
+        if nome not in ativos
+    ], key=lambda x: x["nome"])
+    return zerados
+
+def preencher_aba_zerados(ws, zerados):
+    cab = ["Posição", "Nome do Vendedor", "PDV", "Cotas", "Novos", "Total Geral"]
+    for ci, txt in enumerate(cab, 1):
+        c = ws.cell(row=1, column=ci, value=txt)
+        c.font      = Font(name="Calibri", bold=True, color=BRANCO, size=12)
+        c.fill      = PatternFill("solid", start_color=VERDE_ESCURO)
+        c.alignment = Alignment(horizontal="center", vertical="center")
+        c.border    = borda()
+    ws.row_dimensions[1].height = 20
+
+    for ri, item in enumerate(zerados, 2):
+        ws.row_dimensions[ri].height = 15
+        vals = [ri - 1, item["nome"], item["pdv"], 0, 0, 0]
+        for ci, v in enumerate(vals, 1):
+            c = ws.cell(row=ri, column=ci, value=v)
+            c.font      = Font(name="Calibri", size=11)
+            c.fill      = PatternFill("solid", start_color=BRANCO)
+            c.alignment = Alignment(horizontal="left" if ci == 2 else "center", vertical="center")
+            c.border    = borda()
+
+    ws.column_dimensions["A"].width = 12
+    ws.column_dimensions["B"].width = 32
+    ws.column_dimensions["C"].width = 16
+    ws.column_dimensions["D"].width = 12
+    ws.column_dimensions["E"].width = 12
+    ws.column_dimensions["F"].width = 14
+
 def gerar_excel(dados_todos):
     wb = Workbook()
 
@@ -161,11 +197,13 @@ def gerar_excel(dados_todos):
     labrea  = ranking([d for d in dados_todos if d["pdv"] == "LÁBREA"])
     boca    = ranking([d for d in dados_todos if d["pdv"] == "BOCA DO ACRE"])
     humaita = ranking([d for d in dados_todos if d["pdv"] == "HUMAITÁ"])
+    zerados = get_zerados(dados_todos)
 
     ws = wb.active; ws.title = "GERAL";        preencher_aba(ws, geral)
     ws = wb.create_sheet("LÁBREA");             preencher_aba(ws, labrea)
     ws = wb.create_sheet("BOCA DO ACRE");       preencher_aba(ws, boca)
     ws = wb.create_sheet("HUMAITÁ");            preencher_aba(ws, humaita)
+    ws = wb.create_sheet("ZERADOS");            preencher_aba_zerados(ws, zerados)
 
     buf = io.BytesIO()
     wb.save(buf)
@@ -192,11 +230,14 @@ def preview():
         s = sorted(lista, key=lambda x: (-x["total"], -x["cotas"], x["nome"]))
         return [[i+1, d["nome"], d["pdv"], d["cotas"], d["novos"], d["total"]] for i, d in enumerate(s)]
 
+    zerados = get_zerados(dados)
+
     return jsonify({
         "geral":   rank(dados),
         "labrea":  rank([d for d in dados if d["pdv"] == "LÁBREA"]),
         "boca":    rank([d for d in dados if d["pdv"] == "BOCA DO ACRE"]),
         "humaita": rank([d for d in dados if d["pdv"] == "HUMAITÁ"]),
+        "zerados": [[i+1, z["nome"], z["pdv"], 0, 0, 0] for i, z in enumerate(zerados)],
     })
 
 @app.route("/gerar", methods=["POST"])
