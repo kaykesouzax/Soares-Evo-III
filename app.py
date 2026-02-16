@@ -1,10 +1,15 @@
-from flask import Flask, request, send_file, render_template, jsonify
+from flask import Flask, request, send_file, render_template, jsonify, send_from_directory
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from datetime import datetime
 import io
+import os
 
 app = Flask(__name__)
+
+@app.route('/favicon.ico')
+def favicon():
+    return send_from_directory(os.path.join(app.root_path, 'static'), 'favicon.ico', mimetype='image/x-icon')
 
 # ============================================================
 # BASE MESTRA
