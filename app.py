@@ -1,6 +1,7 @@
 from flask import Flask, request, send_file, render_template, jsonify
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from datetime import datetime
 import io
 
 app = Flask(__name__)
@@ -112,17 +113,17 @@ def borda():
     return Border(left=s, right=s, top=s, bottom=s)
 
 def preencher_aba(ws, dados):
-    cab = ["POSIÇÃO", "NOME DO VENDEDOR", "COTAS", "NOVOS", "TOTAL GERAL"]
+    cab = ["Posição", "Nome do Vendedor", "Cotas", "Novos", "Total Geral"]
     for ci, txt in enumerate(cab, 1):
         c = ws.cell(row=1, column=ci, value=txt)
         c.font      = Font(name="Calibri", bold=True, color=BRANCO, size=12)
         c.fill      = PatternFill("solid", start_color=VERDE_ESCURO)
         c.alignment = Alignment(horizontal="center", vertical="center")
         c.border    = borda()
-    ws.row_dimensions[1].height = round(0.70 / 2.54 * 72, 2)
+    ws.row_dimensions[1].height = 20
 
     for ri, item in enumerate(dados, 2):
-        ws.row_dimensions[ri].height = round(0.55 / 2.54 * 72, 2)
+        ws.row_dimensions[ri].height = 15
         for ci, v in enumerate([item["posicao"], item["nome"], item["cotas"], item["novos"], item["total"]], 1):
             c = ws.cell(row=ri, column=ci, value=v)
             c.font      = Font(name="Calibri", size=11)
@@ -131,11 +132,11 @@ def preencher_aba(ws, dados):
             c.border    = borda()
 
     tr = len(dados) + 2
-    ws.row_dimensions[tr].height = round(0.55 / 2.54 * 72, 2)
+    ws.row_dimensions[tr].height = 15
     soma_c = sum(d["cotas"] for d in dados)
     soma_n = sum(d["novos"] for d in dados)
     soma_t = sum(d["total"] for d in dados)
-    for ci, v in enumerate(["", "TOTAL GERAL", soma_c, soma_n, soma_t], 1):
+    for ci, v in enumerate(["", "Total Geral", soma_c, soma_n, soma_t], 1):
         c = ws.cell(row=tr, column=ci, value=v)
         c.font      = Font(name="Calibri", bold=True, size=11)
         c.fill      = PatternFill("solid", start_color=BRANCO)
@@ -184,11 +185,12 @@ def gerar():
         return jsonify({"erro": "Nenhum vendedor identificado. Verifique os dados colados."}), 400
 
     buf = gerar_excel(dados)
+    nome_arquivo = datetime.now().strftime("%d.%m") + ".xlsx"
     return send_file(
         buf,
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         as_attachment=True,
-        download_name="Relatorio_Vendas.xlsx"
+        download_name=nome_arquivo
     )
 
 if __name__ == "__main__":
