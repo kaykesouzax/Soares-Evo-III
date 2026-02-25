@@ -118,7 +118,7 @@ def borda():
     return Border(left=s, right=s, top=s, bottom=s)
 
 def preencher_aba(ws, dados):
-    cab = ["Posição", "Nome do Vendedor", "Cotas", "Novos", "Total Geral"]
+    cab = ["", "Nome do Vendedor", "Cotas", "Novos", "Total Geral"]
     for ci, txt in enumerate(cab, 1):
         c = ws.cell(row=1, column=ci, value=txt)
         c.font      = Font(name="Calibri", bold=True, color=BRANCO, size=12)
