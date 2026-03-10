@@ -1,10 +1,15 @@
-from flask import Flask, request, send_file, render_template, jsonify
+from flask import Flask, request, send_file, render_template, jsonify, send_from_directory
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from datetime import datetime
 import io
+import os
 
 app = Flask(__name__)
+
+@app.route('/favicon.ico')
+def favicon():
+    return send_from_directory(os.path.join(app.root_path, 'static'), 'favicon.ico', mimetype='image/x-icon')
 
 # ============================================================
 # BASE MESTRA
@@ -24,7 +29,6 @@ MAPA_NOMES = {
     "ANTONIO MARCIO BATISTA DOS SANTOS": "ANTONIO MARCIO", "ANTONIO MARCIO": "ANTONIO MARCIO",
     "GUILHERME DO NASCIMENTO MELO": "GUILHERME MELO", "GUILHERME DO": "GUILHERME MELO", "GUILHERME NASCIMENTO": "GUILHERME MELO", "GUILHERME MELO": "GUILHERME MELO",
     "ANTONIO HENRIQUE": "ANTONIO HENRIQUE", "ANTONIO COSTA": "ANTONIO HENRIQUE", "ANTONIO HENRIQUE DA COSTA DOS SANTOS": "ANTONIO HENRIQUE",
-    "RUBENITO GOMES": "RUBENITO GOMES", "RUBENITO JUNIOR": "RUBENITO GOMES", "RUBENITO GOMES ONOFRE JUNIOR": "RUBENITO GOMES",
     "OMAR VALE": "OMAR VALE", "OMAR NASCIMENTO": "OMAR VALE", "OMAR VALE NASCIMENTO": "OMAR VALE",
     "WENDEL SILVA": "WENDEL SILVA", "WENDEL OLIVEIRA": "WENDEL SILVA", "WENDEL SILVA DE OLIVEIRA": "WENDEL SILVA",
     "BRUNA CARLA BEZERRA": "BRUNA CARLA", "BRUNA BEZERRA": "BRUNA CARLA", "BRUNA CARLA BEZERRA SOUZA": "BRUNA CARLA", "BRUNA SOUZA": "BRUNA CARLA",
@@ -35,7 +39,6 @@ MAPA_NOMES = {
     "MARIA HELENA": "MARIA HELENA", "MARIA GOMES": "MARIA HELENA", "MARIA HELENA PIMENTA GOMES": "MARIA HELENA",
     "ADRIANO JOTAERRY": "ADRIANO JOTAERRY", "ADRIANO NUNES": "ADRIANO JOTAERRY", "ADRIANO JOTAERRY VIEIRA NUNES": "ADRIANO JOTAERRY",
     "SERGIO MOREIRA": "SERGIO MOREIRA", "SERGIO COSTA": "SERGIO MOREIRA", "SERGIO MOREIRA DA COSTA JUNIOR": "SERGIO MOREIRA",
-    "ROSA CARVALHO": "ROSA NUNES", "ROSA NUNES": "ROSA NUNES", "ROSA CARVALHO NUNES": "ROSA NUNES",
     "EDSON RUAN": "EDSON RUAN", "EDSON NOGUEIRA": "EDSON RUAN", "EDSON RUAN LEAL NOGUEIRA": "EDSON RUAN",
     "KAWANE ANDRADE": "KAWANE KISTNER", "KAWANE KISTNER": "KAWANE KISTNER", "KAWANE ANDRADE KISTNER": "KAWANE KISTNER",
     "ROSIELE TORRES": "ROSIELE TORRES", "ROSIELE SILVA": "ROSIELE TORRES", "ROSIELE DA SILVA TORRES": "ROSIELE TORRES",
@@ -52,11 +55,11 @@ VENDEDORES_PDV = {
     "TAYANE MAIA": "LÁBREA", "ARTEMISA BELEM": "LÁBREA", "AGUIDA SILVA": "LÁBREA",
     "RODRIGO QUEMEL": "LÁBREA", "JANDERSON CARNEIRO": "LÁBREA", "JOSE EWERTHON": "LÁBREA",
     "THALYS CASTRO": "LÁBREA", "ANTONIO MARCIO": "LÁBREA", "GUILHERME MELO": "LÁBREA",
-    "ANTONIO HENRIQUE": "BOCA DO ACRE", "RUBENITO GOMES": "BOCA DO ACRE", "OMAR VALE": "BOCA DO ACRE",
+    "ANTONIO HENRIQUE": "BOCA DO ACRE", "OMAR VALE": "BOCA DO ACRE",
     "WENDEL SILVA": "BOCA DO ACRE", "BRUNA CARLA": "BOCA DO ACRE", "JONAS COELHO": "BOCA DO ACRE",
     "CARLOS BARBOSA": "BOCA DO ACRE",
     "LUAN HENRIQUE": "HUMAITÁ", "ANDREI ALVES": "HUMAITÁ", "MARIA HELENA": "HUMAITÁ",
-    "ADRIANO JOTAERRY": "HUMAITÁ", "SERGIO MOREIRA": "HUMAITÁ", "ROSA NUNES": "HUMAITÁ",
+    "ADRIANO JOTAERRY": "HUMAITÁ", "SERGIO MOREIRA": "HUMAITÁ",
     "EDSON RUAN": "HUMAITÁ", "KAWANE KISTNER": "HUMAITÁ", "ROSIELE TORRES": "HUMAITÁ",
     "SHIRLANE MELO": "HUMAITÁ", "JOSE WILLIAN": "HUMAITÁ", "DIEGO GOMES": "HUMAITÁ",
     "RAIMISON RODRIGUES": "HUMAITÁ",
@@ -100,6 +103,15 @@ def processar_dados(texto_cotas, texto_novos):
             continue
         dados.append({"nome": nome, "pdv": VENDEDORES_PDV.get(nome, ""), "cotas": c, "novos": n, "total": t})
     return dados
+
+def get_zerados(dados_ativos):
+    ativos = {d["nome"] for d in dados_ativos}
+    zerados = sorted([
+        {"nome": nome, "pdv": pdv}
+        for nome, pdv in VENDEDORES_PDV.items()
+        if nome not in ativos
+    ], key=lambda x: x["nome"])
+    return zerados
 
 # ============================================================
 # GERAÇÃO DO EXCEL
@@ -149,6 +161,33 @@ def preencher_aba(ws, dados):
     ws.column_dimensions["D"].width = 12
     ws.column_dimensions["E"].width = 14
 
+def preencher_aba_zerados(ws, zerados):
+    cab = ["Posição", "Nome do Vendedor", "PDV", "Cotas", "Novos", "Total Geral"]
+    for ci, txt in enumerate(cab, 1):
+        c = ws.cell(row=1, column=ci, value=txt)
+        c.font      = Font(name="Calibri", bold=True, color=BRANCO, size=12)
+        c.fill      = PatternFill("solid", start_color=VERDE_ESCURO)
+        c.alignment = Alignment(horizontal="center", vertical="center")
+        c.border    = borda()
+    ws.row_dimensions[1].height = 20
+
+    for ri, item in enumerate(zerados, 2):
+        ws.row_dimensions[ri].height = 15
+        vals = [ri - 1, item["nome"], item["pdv"], 0, 0, 0]
+        for ci, v in enumerate(vals, 1):
+            c = ws.cell(row=ri, column=ci, value=v)
+            c.font      = Font(name="Calibri", size=11)
+            c.fill      = PatternFill("solid", start_color=BRANCO)
+            c.alignment = Alignment(horizontal="left" if ci == 2 else "center", vertical="center")
+            c.border    = borda()
+
+    ws.column_dimensions["A"].width = 12
+    ws.column_dimensions["B"].width = 32
+    ws.column_dimensions["C"].width = 16
+    ws.column_dimensions["D"].width = 12
+    ws.column_dimensions["E"].width = 12
+    ws.column_dimensions["F"].width = 14
+
 def gerar_excel(dados_todos):
     wb = Workbook()
 
@@ -156,11 +195,13 @@ def gerar_excel(dados_todos):
     labrea  = ranking([d for d in dados_todos if d["pdv"] == "LÁBREA"])
     boca    = ranking([d for d in dados_todos if d["pdv"] == "BOCA DO ACRE"])
     humaita = ranking([d for d in dados_todos if d["pdv"] == "HUMAITÁ"])
+    zerados = get_zerados(dados_todos)
 
     ws = wb.active; ws.title = "GERAL";        preencher_aba(ws, geral)
     ws = wb.create_sheet("LÁBREA");             preencher_aba(ws, labrea)
     ws = wb.create_sheet("BOCA DO ACRE");       preencher_aba(ws, boca)
     ws = wb.create_sheet("HUMAITÁ");            preencher_aba(ws, humaita)
+    ws = wb.create_sheet("ZERADOS");            preencher_aba_zerados(ws, zerados)
 
     buf = io.BytesIO()
     wb.save(buf)
@@ -187,11 +228,14 @@ def preview():
         s = sorted(lista, key=lambda x: (-x["total"], -x["cotas"], x["nome"]))
         return [[i+1, d["nome"], d["pdv"], d["cotas"], d["novos"], d["total"]] for i, d in enumerate(s)]
 
+    zerados = get_zerados(dados)
+
     return jsonify({
         "geral":   rank(dados),
         "labrea":  rank([d for d in dados if d["pdv"] == "LÁBREA"]),
         "boca":    rank([d for d in dados if d["pdv"] == "BOCA DO ACRE"]),
         "humaita": rank([d for d in dados if d["pdv"] == "HUMAITÁ"]),
+        "zerados": [[i+1, z["nome"], z["pdv"], 0, 0, 0] for i, z in enumerate(zerados)],
     })
 
 @app.route("/gerar", methods=["POST"])
