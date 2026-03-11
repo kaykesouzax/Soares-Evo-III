@@ -174,27 +174,34 @@ def processar_estoque_texto(texto):
 def processar_estoque_excel(arquivo):
     # Salvar temporariamente
     import tempfile
-    import pandas as pd
     
     with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp:
         arquivo.save(tmp.name)
         tmp_path = tmp.name
     
     try:
-        # Ler com pandas (mais robusto para Excel com estilos complexos)
-        df = pd.read_excel(tmp_path, header=None, engine='openpyxl')
+        # Tentar ler ignorando warnings de estilos
+        import warnings
+        warnings.filterwarnings('ignore', category=UserWarning, module='openpyxl')
+        
+        wb = load_workbook(tmp_path, data_only=True, read_only=False, keep_links=False)
+        ws = wb.active
         
         dados = {}
         ordem = []
         
-        for _, row in df.iterrows():
-            if pd.isna(row[0]):
+        # Iterar pelas linhas manualmente
+        for row in ws.iter_rows(values_only=True):
+            if not row or not row[0]:
                 continue
             
-            modelo = str(row[0]).strip()
-            cor = str(row[2]).strip() if len(row) >= 3 and not pd.isna(row[2]) else ""
+            try:
+                modelo = str(row[0]).strip()
+                cor = str(row[2]).strip() if len(row) >= 3 and row[2] else ""
+            except:
+                continue
             
-            if not modelo or modelo == 'nan':
+            if not modelo or modelo == 'None':
                 continue
             
             modelo = normalizar_modelo(modelo)
@@ -207,6 +214,44 @@ def processar_estoque_excel(arquivo):
             if not eh_motor(modelo) and cor_padrao:
                 dados[modelo].add(cor_padrao)
         
+        wb.close()
+        
+    except Exception as e:
+        # Se falhar, tentar abordagem alternativa lendo como binário
+        import openpyxl
+        from io import BytesIO
+        
+        arquivo.seek(0)
+        wb = openpyxl.load_workbook(BytesIO(arquivo.read()), data_only=True)
+        ws = wb.active
+        
+        dados = {}
+        ordem = []
+        
+        for row in ws.values:
+            if not row or not row[0]:
+                continue
+            
+            try:
+                modelo = str(row[0]).strip()
+                cor = str(row[2]).strip() if len(row) >= 3 and row[2] else ""
+            except:
+                continue
+            
+            if not modelo or modelo == 'None':
+                continue
+            
+            modelo = normalizar_modelo(modelo)
+            cor_padrao = padronizar_cor(cor)
+            
+            if modelo not in dados:
+                dados[modelo] = set()
+                ordem.append(modelo)
+            
+            if not eh_motor(modelo) and cor_padrao:
+                dados[modelo].add(cor_padrao)
+        
+        wb.close()
     finally:
         import os
         if os.path.exists(tmp_path):
