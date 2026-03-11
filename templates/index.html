@@ -752,11 +752,13 @@ async function gerarEstoque() {
       URL.revokeObjectURL(url);
       document.getElementById('status-estoque').textContent = '✓ Planilha gerada!';
     } else {
-      const err = await resp.json();
+      const err = await resp.json().catch(() => ({erro: 'Erro desconhecido'}));
+      console.error('Erro do servidor:', err);
       document.getElementById('status-estoque').textContent = '⚠ ' + (err.erro || 'Erro ao gerar.');
     }
   } catch(e) {
-    document.getElementById('status-estoque').textContent = '⚠ Falha na conexão.';
+    console.error('Erro de conexão:', e);
+    document.getElementById('status-estoque').textContent = '⚠ Falha na conexão: ' + e.message;
   }
 }
 
