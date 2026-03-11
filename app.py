@@ -172,86 +172,84 @@ def processar_estoque_texto(texto):
     return dados, ordem
 
 def processar_estoque_excel(arquivo):
-    # Salvar temporariamente
     import tempfile
+    from zipfile import ZipFile
+    import xml.etree.ElementTree as ET
     
     with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp:
         arquivo.save(tmp.name)
         tmp_path = tmp.name
     
+    dados = {}
+    ordem = []
+    
     try:
-        # Tentar ler ignorando warnings de estilos
-        import warnings
-        warnings.filterwarnings('ignore', category=UserWarning, module='openpyxl')
-        
-        wb = load_workbook(tmp_path, data_only=True, read_only=False, keep_links=False)
-        ws = wb.active
-        
-        dados = {}
-        ordem = []
-        
-        # Iterar pelas linhas manualmente
-        for row in ws.iter_rows(values_only=True):
-            if not row or not row[0]:
-                continue
-            
+        # Ler XLSX diretamente do ZIP (bypass openpyxl styles)
+        with ZipFile(tmp_path, 'r') as zip_file:
+            # Ler sheet1 (primeira planilha)
+            xml_content = zip_file.read('xl/worksheets/sheet1.xml')
+            # Ler strings compartilhadas se existir
             try:
-                modelo = str(row[0]).strip()
-                cor = str(row[2]).strip() if len(row) >= 3 and row[2] else ""
+                shared_strings_xml = zip_file.read('xl/sharedStrings.xml')
+                shared_strings_root = ET.fromstring(shared_strings_xml)
+                shared_strings = [elem.text or '' for elem in shared_strings_root.iter('{http://schemas.openxmlformats.org/spreadsheetml/2006/main}t')]
             except:
-                continue
+                shared_strings = []
             
-            if not modelo or modelo == 'None':
-                continue
+            root = ET.fromstring(xml_content)
             
-            modelo = normalizar_modelo(modelo)
-            cor_padrao = padronizar_cor(cor)
-            
-            if modelo not in dados:
-                dados[modelo] = set()
-                ordem.append(modelo)
-            
-            if not eh_motor(modelo) and cor_padrao:
-                dados[modelo].add(cor_padrao)
-        
-        wb.close()
-        
+            for row_elem in root.iter('{http://schemas.openxmlformats.org/spreadsheetml/2006/main}row'):
+                cells = list(row_elem.iter('{http://schemas.openxmlformats.org/spreadsheetml/2006/main}c'))
+                
+                if len(cells) < 3:
+                    continue
+                
+                # Extrair valores das células A (modelo), C (cor)
+                modelo_cell = cells[0] if len(cells) > 0 else None
+                cor_cell = cells[2] if len(cells) > 2 else None
+                
+                modelo = ''
+                cor = ''
+                
+                if modelo_cell is not None:
+                    v_elem = modelo_cell.find('{http://schemas.openxmlformats.org/spreadsheetml/2006/main}v')
+                    if v_elem is not None and v_elem.text:
+                        # Se for string compartilhada
+                        if modelo_cell.get('t') == 's':
+                            try:
+                                modelo = shared_strings[int(v_elem.text)]
+                            except:
+                                modelo = v_elem.text
+                        else:
+                            modelo = v_elem.text
+                
+                if cor_cell is not None:
+                    v_elem = cor_cell.find('{http://schemas.openxmlformats.org/spreadsheetml/2006/main}v')
+                    if v_elem is not None and v_elem.text:
+                        if cor_cell.get('t') == 's':
+                            try:
+                                cor = shared_strings[int(v_elem.text)]
+                            except:
+                                cor = v_elem.text
+                        else:
+                            cor = v_elem.text
+                
+                if not modelo or modelo.strip() == '':
+                    continue
+                
+                modelo = normalizar_modelo(modelo.strip())
+                cor_padrao = padronizar_cor(cor.strip())
+                
+                if modelo not in dados:
+                    dados[modelo] = set()
+                    ordem.append(modelo)
+                
+                if not eh_motor(modelo) and cor_padrao:
+                    dados[modelo].add(cor_padrao)
+    
     except Exception as e:
-        # Se falhar, tentar abordagem alternativa lendo como binário
-        import openpyxl
-        from io import BytesIO
-        
-        arquivo.seek(0)
-        wb = openpyxl.load_workbook(BytesIO(arquivo.read()), data_only=True)
-        ws = wb.active
-        
-        dados = {}
-        ordem = []
-        
-        for row in ws.values:
-            if not row or not row[0]:
-                continue
-            
-            try:
-                modelo = str(row[0]).strip()
-                cor = str(row[2]).strip() if len(row) >= 3 and row[2] else ""
-            except:
-                continue
-            
-            if not modelo or modelo == 'None':
-                continue
-            
-            modelo = normalizar_modelo(modelo)
-            cor_padrao = padronizar_cor(cor)
-            
-            if modelo not in dados:
-                dados[modelo] = set()
-                ordem.append(modelo)
-            
-            if not eh_motor(modelo) and cor_padrao:
-                dados[modelo].add(cor_padrao)
-        
-        wb.close()
+        # Fallback: tentar com openpyxl ignorando tudo
+        raise Exception(f"Não foi possível ler o Excel: {str(e)}")
     finally:
         import os
         if os.path.exists(tmp_path):
