@@ -172,31 +172,44 @@ def processar_estoque_texto(texto):
     return dados, ordem
 
 def processar_estoque_excel(arquivo):
-    wb = load_workbook(arquivo, read_only=True, data_only=True)
-    ws = wb.active
-    dados = {}
-    ordem = []
+    # Salvar temporariamente para leitura
+    import tempfile
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp:
+        arquivo.save(tmp.name)
+        tmp_path = tmp.name
     
-    for row in ws.iter_rows(min_row=1, values_only=True):
-        if not row or not row[0]:
-            continue
-        modelo = str(row[0]).strip()
-        cor = str(row[2]).strip() if len(row) >= 3 else ""
+    try:
+        wb = load_workbook(tmp_path, read_only=True, data_only=True)
+        ws = wb.active
+        dados = {}
+        ordem = []
         
-        if not modelo:
-            continue
+        for row in ws.iter_rows(min_row=1, values_only=True):
+            if not row or not row[0]:
+                continue
+            modelo = str(row[0]).strip()
+            cor = str(row[2]).strip() if len(row) >= 3 and row[2] else ""
+            
+            if not modelo or modelo == 'None':
+                continue
+            
+            modelo = normalizar_modelo(modelo)
+            cor_padrao = padronizar_cor(cor)
+            
+            if modelo not in dados:
+                dados[modelo] = set()
+                ordem.append(modelo)
+            
+            if not eh_motor(modelo) and cor_padrao:
+                dados[modelo].add(cor_padrao)
         
-        modelo = normalizar_modelo(modelo)
-        cor_padrao = padronizar_cor(cor)
-        
-        if modelo not in dados:
-            dados[modelo] = set()
-            ordem.append(modelo)
-        
-        if not eh_motor(modelo) and cor_padrao:
-            dados[modelo].add(cor_padrao)
+        wb.close()
+    finally:
+        # Limpar arquivo temporário
+        import os
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
     
-    wb.close()
     return dados, ordem
 
 def consolidar_estoque(dados, ordem):
