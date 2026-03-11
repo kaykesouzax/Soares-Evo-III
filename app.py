@@ -202,8 +202,8 @@ def processar_estoque_excel(arquivo):
             for row_elem in root.iter('{http://schemas.openxmlformats.org/spreadsheetml/2006/main}row'):
                 row_num += 1
                 
-                # Pular as 2 primeiras linhas (título e cabeçalho)
-                if row_num <= 2:
+                # Pular as 3 primeiras linhas (título, data e cabeçalho)
+                if row_num <= 3:
                     continue
                 
                 cells = list(row_elem.iter('{http://schemas.openxmlformats.org/spreadsheetml/2006/main}c'))
