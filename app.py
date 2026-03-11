@@ -424,25 +424,31 @@ def gerar():
 
 @app.route("/estoque", methods=["POST"])
 def estoque():
-    # Prioridade: arquivo Excel > texto
-    if 'arquivo' in request.files and request.files['arquivo'].filename:
-        arquivo = request.files['arquivo']
-        dados, ordem = processar_estoque_excel(arquivo)
-    else:
-        texto = request.form.get('texto', '')
-        if not texto.strip():
-            return jsonify({"erro": "Nenhum dado fornecido."}), 400
-        dados, ordem = processar_estoque_texto(texto)
-    
-    consolidado = consolidar_estoque(dados, ordem)
-    buf = gerar_excel_estoque(consolidado)
-    
-    return send_file(
-        buf,
-        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        as_attachment=True,
-        download_name="Estoque Atual.xlsx"
-    )
+    try:
+        # Prioridade: arquivo Excel > texto
+        if 'arquivo' in request.files and request.files['arquivo'].filename:
+            arquivo = request.files['arquivo']
+            try:
+                dados, ordem = processar_estoque_excel(arquivo)
+            except Exception as e:
+                return jsonify({"erro": f"Erro ao processar Excel: {str(e)}"}), 400
+        else:
+            texto = request.form.get('texto', '')
+            if not texto.strip():
+                return jsonify({"erro": "Nenhum dado fornecido."}), 400
+            dados, ordem = processar_estoque_texto(texto)
+        
+        consolidado = consolidar_estoque(dados, ordem)
+        buf = gerar_excel_estoque(consolidado)
+        
+        return send_file(
+            buf,
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            as_attachment=True,
+            download_name="Estoque Atual.xlsx"
+        )
+    except Exception as e:
+        return jsonify({"erro": f"Erro interno: {str(e)}"}), 500
 
 if __name__ == "__main__":
     app.run(debug=False)
