@@ -172,25 +172,29 @@ def processar_estoque_texto(texto):
     return dados, ordem
 
 def processar_estoque_excel(arquivo):
-    # Salvar temporariamente para leitura
+    # Salvar temporariamente
     import tempfile
+    import pandas as pd
+    
     with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp:
         arquivo.save(tmp.name)
         tmp_path = tmp.name
     
     try:
-        wb = load_workbook(tmp_path, read_only=True, data_only=True)
-        ws = wb.active
+        # Ler com pandas (mais robusto para Excel com estilos complexos)
+        df = pd.read_excel(tmp_path, header=None, engine='openpyxl')
+        
         dados = {}
         ordem = []
         
-        for row in ws.iter_rows(min_row=1, values_only=True):
-            if not row or not row[0]:
+        for _, row in df.iterrows():
+            if pd.isna(row[0]):
                 continue
-            modelo = str(row[0]).strip()
-            cor = str(row[2]).strip() if len(row) >= 3 and row[2] else ""
             
-            if not modelo or modelo == 'None':
+            modelo = str(row[0]).strip()
+            cor = str(row[2]).strip() if len(row) >= 3 and not pd.isna(row[2]) else ""
+            
+            if not modelo or modelo == 'nan':
                 continue
             
             modelo = normalizar_modelo(modelo)
@@ -203,9 +207,7 @@ def processar_estoque_excel(arquivo):
             if not eh_motor(modelo) and cor_padrao:
                 dados[modelo].add(cor_padrao)
         
-        wb.close()
     finally:
-        # Limpar arquivo temporário
         import os
         if os.path.exists(tmp_path):
             os.remove(tmp_path)
