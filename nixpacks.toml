@@ -1,5 +1,12 @@
-[phases.build]
+[phases.setup]
+nixPkgs = ["python310"]
+
+[phases.install]
 cmds = ["pip install -r requirements.txt"]
 
 [start]
 cmd = "gunicorn app:app"
+
+[deploy]
+startCommand = "gunicorn app:app"
+serverless = true  # ← ADICIONA ESSA LINHA
