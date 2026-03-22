@@ -32,16 +32,12 @@
     }
     
     .menu-btn {
-      position: fixed;
-      top: 24px;
-      left: 24px;
       width: 44px;
       height: 44px;
       background: transparent;
       border: 1.5px solid var(--glass-border);
       border-radius: 8px;
       cursor: pointer;
-      z-index: 1001;
       display: flex;
       flex-direction: column;
       justify-content: center;
@@ -155,9 +151,15 @@
       background: var(--border);
       padding: 20px 32px;
       display: flex;
+      align-items: center;
+      gap: 24px;
+      border-bottom: 1px solid var(--border);
+    }
+    .header-content {
+      flex: 1;
+      display: flex;
       justify-content: space-between;
       align-items: center;
-      border-bottom: 1px solid var(--border);
     }
     .header-title {
       font-family: 'Bebas Neue', sans-serif;
@@ -429,12 +431,6 @@
   </style>
 </head>
 <body>
-<button class="menu-btn" id="menuBtn">
-  <span></span>
-  <span></span>
-  <span></span>
-</button>
-
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
 <nav class="sidebar" id="sidebar">
@@ -446,10 +442,17 @@
 </nav>
 
 <header>
-  <div>
-    <div class="header-title">SOARES EVOLUCION III <span>|</span> <span id="pageTitle">RELATÓRIO DE VENDAS</span></div>
+  <button class="menu-btn" id="menuBtn">
+    <span></span>
+    <span></span>
+    <span></span>
+  </button>
+  <div class="header-content">
+    <div>
+      <div class="header-title">SOARES EVOLUCION III <span>|</span> <span id="pageTitle">RELATÓRIO DE VENDAS</span></div>
+    </div>
+    <div class="header-subtitle">GERAÇÃO AUTOMÁTICA</div>
   </div>
-  <div class="header-subtitle">GERAÇÃO AUTOMÁTICA</div>
 </header>
 
 <main>
@@ -616,6 +619,7 @@ function irPara(n) {
 }
 
 let dadosReais = null;
+let feriasSet = new Set(); // Guarda nomes em férias
 
 // RANKING - PROCESSAR
 async function processar() {
@@ -643,20 +647,7 @@ async function processar() {
     }
 
     dadosReais = await prevResp.json();
-
-    const resp = await fetch('/gerar', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cotas, novos })
-    });
-
-    if (resp.ok) {
-      const blob = await resp.blob();
-      const url  = URL.createObjectURL(blob);
-      const a    = document.createElement('a');
-      a.href = url; a.download = resp.headers.get('Content-Disposition')?.split('filename=')[1] || 'relatorio.xlsx';
-      a.click(); URL.revokeObjectURL(url);
-    }
+    feriasSet.clear(); // Limpa férias ao processar novos dados
 
     btn.classList.remove('loading'); btn.textContent = 'Próximo →';
     irPara(3);
@@ -681,13 +672,16 @@ function renderTabela(aba) {
   const totalN = dados.reduce((a,r)=>a+r[4],0);
   const totalT = dados.reduce((a,r)=>a+r[5],0);
 
-  const rows = dados.map(r => `
+  const rows = dados.map(r => {
+    const checkboxHtml = isZerados ? `<input type="checkbox" onchange="toggleFerias('${r[1]}')" ${feriasSet.has(r[1]) ? 'checked' : ''}> ` : '';
+    return `
     <tr>
       <td><span class="pos ${r[0]===1&&!isZerados?'top1':''}">${r[0]}</span></td>
-      <td>${r[1]}</td>
+      <td>${checkboxHtml}${r[1]}</td>
       ${isZerados ? `<td>${r[2]}</td>` : ''}
       <td>${r[3]}</td><td>${r[4]}</td><td>${r[5]}</td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
 
   const thPdv = isZerados ? '<th>PDV</th>' : '';
   const tdPdv = isZerados ? '<td>—</td>' : '';
@@ -697,6 +691,14 @@ function renderTabela(aba) {
       <thead><tr><th>Pos.</th><th style="text-align:left">Nome do Vendedor</th>${thPdv}<th>Cotas</th><th>Novos</th><th>Total</th></tr></thead>
       <tbody>${rows}<tr class="total-row"><td>—</td><td style="text-align:left">${isZerados ? dados.length + ' vendedores' : 'Total Geral'}</td>${tdPdv}<td>${totalC}</td><td>${totalN}</td><td>${totalT}</td></tr></tbody>
     </table>`;
+}
+
+function toggleFerias(nome) {
+  if (feriasSet.has(nome)) {
+    feriasSet.delete(nome);
+  } else {
+    feriasSet.add(nome);
+  }
 }
 
 function trocarAba(aba, el) {
@@ -713,7 +715,29 @@ function limpar() {
 }
 
 function baixar() {
-  document.getElementById('btn-proximo').click();
+  const cotas = document.getElementById('input-cotas').value.trim();
+  const novos = document.getElementById('input-novos').value.trim();
+  
+  fetch('/gerar', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ 
+      cotas, 
+      novos,
+      ferias: Array.from(feriasSet)
+    })
+  }).then(resp => {
+    if (resp.ok) {
+      return resp.blob().then(blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = resp.headers.get('Content-Disposition')?.split('filename=')[1] || 'relatorio.xlsx';
+        a.click();
+        URL.revokeObjectURL(url);
+      });
+    }
+  });
 }
 
 // ESTOQUE - GERAR
