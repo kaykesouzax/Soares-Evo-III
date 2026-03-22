@@ -292,35 +292,82 @@ def borda():
     return Border(left=s, right=s, top=s, bottom=s)
 
 def preencher_aba(ws, dados):
+    # Desativar gridlines
+    ws.sheet_view.showGridLines = False
+    
     cab = ["Posição", "Nome do Vendedor", "Cotas", "Novos", "Total Geral"]
+    
+    # CABEÇALHO - sem bordas internas
     for ci, txt in enumerate(cab, 1):
         c = ws.cell(row=1, column=ci, value=txt)
-        c.font      = Font(name="Calibri", bold=True, color=BRANCO, size=12)
-        c.fill      = PatternFill("solid", start_color=VERDE_ESCURO)
+        c.fill = PatternFill("solid", start_color=VERDE_ESCURO)
         c.alignment = Alignment(horizontal="center", vertical="center")
-        c.border    = borda()
+        
+        # A1 - texto invisível (verde no verde)
+        if ci == 1:
+            c.font = Font(name="Calibri", bold=True, color=VERDE_ESCURO, size=12)
+            c.border = Border(
+                left=Side(style="thin", color=VERDE_CLARO),
+                top=Side(style="thin", color=VERDE_CLARO),
+                bottom=Side(style="thin", color=VERDE_CLARO)
+            )
+        elif ci == len(cab):
+            c.font = Font(name="Calibri", bold=True, color=BRANCO, size=12)
+            c.border = Border(
+                right=Side(style="thin", color=VERDE_CLARO),
+                top=Side(style="thin", color=VERDE_CLARO),
+                bottom=Side(style="thin", color=VERDE_CLARO)
+            )
+        else:
+            c.font = Font(name="Calibri", bold=True, color=BRANCO, size=12)
+            c.border = Border(
+                top=Side(style="thin", color=VERDE_CLARO),
+                bottom=Side(style="thin", color=VERDE_CLARO)
+            )
+    
     ws.row_dimensions[1].height = 20
+    
+    # Bordas para dados
+    borda_verde = Border(
+        left=Side(style="thin", color=VERDE_CLARO),
+        right=Side(style="thin", color=VERDE_CLARO),
+        top=Side(style="thin", color=VERDE_CLARO),
+        bottom=Side(style="thin", color=VERDE_CLARO)
+    )
+    borda_direita = Border(right=Side(style="thin", color=VERDE_CLARO))
 
     for ri, item in enumerate(dados, 2):
         ws.row_dimensions[ri].height = 15
         for ci, v in enumerate([item["posicao"], item["nome"], item["cotas"], item["novos"], item["total"]], 1):
             c = ws.cell(row=ri, column=ci, value=v)
-            c.font      = Font(name="Calibri", size=11)
-            c.fill      = PatternFill("solid", start_color=BRANCO)
+            c.fill = PatternFill("solid", start_color=BRANCO)
             c.alignment = Alignment(horizontal="left" if ci == 2 else "center", vertical="center")
-            c.border    = borda()
+            
+            # Coluna 1 - só borda direita, texto verde
+            if ci == 1:
+                c.font = Font(name="Calibri", size=11, color=VERDE_ESCURO)
+                c.border = borda_direita
+            else:
+                c.font = Font(name="Calibri", size=11)
+                c.border = borda_verde
 
     tr = len(dados) + 2
     ws.row_dimensions[tr].height = 15
     soma_c = sum(d["cotas"] for d in dados)
     soma_n = sum(d["novos"] for d in dados)
     soma_t = sum(d["total"] for d in dados)
+    
     for ci, v in enumerate(["", "Total Geral", soma_c, soma_n, soma_t], 1):
         c = ws.cell(row=tr, column=ci, value=v)
-        c.font      = Font(name="Calibri", bold=True, size=11)
-        c.fill      = PatternFill("solid", start_color=BRANCO)
+        c.fill = PatternFill("solid", start_color=BRANCO)
         c.alignment = Alignment(horizontal="left" if ci == 2 else "center", vertical="center")
-        c.border    = borda()
+        
+        if ci == 1:
+            c.font = Font(name="Calibri", bold=True, size=11, color=VERDE_ESCURO)
+            c.border = borda_direita
+        else:
+            c.font = Font(name="Calibri", bold=True, size=11)
+            c.border = borda_verde
 
     ws.column_dimensions["A"].width = 12
     ws.column_dimensions["B"].width = 32
@@ -328,25 +375,71 @@ def preencher_aba(ws, dados):
     ws.column_dimensions["D"].width = 12
     ws.column_dimensions["E"].width = 14
 
-def preencher_aba_zerados(ws, zerados):
+def preencher_aba_zerados(ws, zerados, ferias_list=[]):
+    # Desativar gridlines
+    ws.sheet_view.showGridLines = False
+    
     cab = ["Posição", "Nome do Vendedor", "PDV", "Cotas", "Novos", "Total Geral"]
+    
+    # CABEÇALHO - sem bordas internas
     for ci, txt in enumerate(cab, 1):
         c = ws.cell(row=1, column=ci, value=txt)
-        c.font      = Font(name="Calibri", bold=True, color=BRANCO, size=12)
-        c.fill      = PatternFill("solid", start_color=VERDE_ESCURO)
+        c.fill = PatternFill("solid", start_color=VERDE_ESCURO)
         c.alignment = Alignment(horizontal="center", vertical="center")
-        c.border    = borda()
+        
+        if ci == 1:
+            c.font = Font(name="Calibri", bold=True, color=VERDE_ESCURO, size=12)
+            c.border = Border(
+                left=Side(style="thin", color=VERDE_CLARO),
+                top=Side(style="thin", color=VERDE_CLARO),
+                bottom=Side(style="thin", color=VERDE_CLARO)
+            )
+        elif ci == len(cab):
+            c.font = Font(name="Calibri", bold=True, color=BRANCO, size=12)
+            c.border = Border(
+                right=Side(style="thin", color=VERDE_CLARO),
+                top=Side(style="thin", color=VERDE_CLARO),
+                bottom=Side(style="thin", color=VERDE_CLARO)
+            )
+        else:
+            c.font = Font(name="Calibri", bold=True, color=BRANCO, size=12)
+            c.border = Border(
+                top=Side(style="thin", color=VERDE_CLARO),
+                bottom=Side(style="thin", color=VERDE_CLARO)
+            )
+    
     ws.row_dimensions[1].height = 20
+    
+    # Bordas para dados
+    borda_verde = Border(
+        left=Side(style="thin", color=VERDE_CLARO),
+        right=Side(style="thin", color=VERDE_CLARO),
+        top=Side(style="thin", color=VERDE_CLARO),
+        bottom=Side(style="thin", color=VERDE_CLARO)
+    )
+    borda_direita = Border(right=Side(style="thin", color=VERDE_CLARO))
 
     for ri, item in enumerate(zerados, 2):
         ws.row_dimensions[ri].height = 15
-        vals = [ri - 1, item["nome"], item["pdv"], 0, 0, 0]
+        
+        # Verificar se está de férias
+        em_ferias = item["nome"] in ferias_list
+        valor_numerico = "-" if em_ferias else 0
+        
+        # Posição sempre 1, nome, pdv, valores
+        vals = [1, item["nome"], item["pdv"], valor_numerico, valor_numerico, valor_numerico]
+        
         for ci, v in enumerate(vals, 1):
             c = ws.cell(row=ri, column=ci, value=v)
-            c.font      = Font(name="Calibri", size=11)
-            c.fill      = PatternFill("solid", start_color=BRANCO)
+            c.fill = PatternFill("solid", start_color=BRANCO)
             c.alignment = Alignment(horizontal="left" if ci == 2 else "center", vertical="center")
-            c.border    = borda()
+            
+            if ci == 1:
+                c.font = Font(name="Calibri", size=11, color=VERDE_ESCURO)
+                c.border = borda_direita
+            else:
+                c.font = Font(name="Calibri", size=11)
+                c.border = borda_verde
 
     ws.column_dimensions["A"].width = 12
     ws.column_dimensions["B"].width = 32
@@ -355,7 +448,7 @@ def preencher_aba_zerados(ws, zerados):
     ws.column_dimensions["E"].width = 12
     ws.column_dimensions["F"].width = 14
 
-def gerar_excel_ranking(dados_todos):
+def gerar_excel_ranking(dados_todos, ferias_list=[]):
     wb = Workbook()
 
     geral   = ranking(dados_todos)
@@ -368,7 +461,7 @@ def gerar_excel_ranking(dados_todos):
     ws = wb.create_sheet("LÁBREA");             preencher_aba(ws, labrea)
     ws = wb.create_sheet("BOCA DO ACRE");       preencher_aba(ws, boca)
     ws = wb.create_sheet("HUMAITÁ");            preencher_aba(ws, humaita)
-    ws = wb.create_sheet("ZERADOS");            preencher_aba_zerados(ws, zerados)
+    ws = wb.create_sheet("ZERADOS");            preencher_aba_zerados(ws, zerados, ferias_list)
 
     buf = io.BytesIO()
     wb.save(buf)
@@ -460,12 +553,13 @@ def gerar():
     data = request.get_json()
     texto_cotas = data.get("cotas", "")
     texto_novos = data.get("novos", "")
+    ferias = data.get("ferias", [])  # Lista de nomes em férias
 
     dados = processar_dados(texto_cotas, texto_novos)
     if not dados:
         return jsonify({"erro": "Nenhum vendedor identificado. Verifique os dados colados."}), 400
 
-    buf = gerar_excel_ranking(dados)
+    buf = gerar_excel_ranking(dados, ferias)
     nome_arquivo = datetime.now().strftime("%d.%m") + ".xlsx"
     return send_file(
         buf,
